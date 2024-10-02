@@ -1,0 +1,88 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2021 ImmortalWrt
+
+START=99
+USE_PROCD=1
+PROG=/usr/bin/gowebdav
+
+get_config() {
+	config_load gowebdav
+	config_get "enable" "config" "enable" "0"
+	config_get "listen_port" "config" "listen_port" "6086"
+	config_get "username" "config" "username"
+	config_get "password" "config" "password"
+	config_get "root_dir" "config" "root_dir" "/mnt"
+	config_get "read_only" "config" "read_only" "0"
+	config_get "show_hidden" "config" "show_hidden" "0"
+	config_get "allow_wan" "config" "allow_wan" "0"
+	config_get "use_https" "config" "use_https" "0"
+	config_get "cert_cer" "config" "cert_cer"
+	config_get "cert_key" "config" "cert_key"
+    config_load network
+	config_get "lan_addr" "lan" "ipaddr" "0.0.0.0"
+}
+
+set_firewall() {
+	if [ "$set_type" = "allow" ]; then
+		uci -q delete firewall.gowebdav
+		uci set firewall.gowebdav=rule
+		uci set firewall.gowebdav.name="gowebdav"
+		uci set firewall.gowebdav.target="ACCEPT"
+		uci set firewall.gowebdav.src="wan"
+		uci set firewall.gowebdav.proto="tcp"
+		uci set firewall.gowebdav.dest_port="$listen_port"
+		uci set firewall.gowebdav.enabled="1"
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+	elif [ "$set_type" = "deny" ]; then
+		uci -q delete firewall.gowebdav
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+	fi
+}
+
+start_service() {
+	get_config
+
+	[ "$enable" -ne "1" ] && return 1
+	mkdir -p $root_dir
+
+	if [ "$allow_wan" -eq "1" ]; then
+		listen_addr=
+		set_type="allow"
+	else
+		listen_addr=$lan_addr
+		set_type="deny"
+	fi
+	set_firewall
+
+	{ [ -n "$username" ] && [ -n "$password" ]; } && auth_arg="-user $username -password $password"
+	[ "$read_only" -eq "1" ] && readonly_arg="-read-only"
+	[ "$show_hidden" -eq "1" ] && showhidden_arg="-show-hidden"
+	{ [ "$use_https" -eq "1" ] && [ -e "$cert_cer" ] && [ -e "$cert_key" ]; } && https_arg="-https-mode -https-cert-file $cert_cer -https-key-file $cert_key"
+
+	procd_open_instance gowebdav
+	procd_set_param command $PROG
+	procd_append_param command -dir "$root_dir" -port "$listen_addr:$listen_port" $auth_arg $readonly_arg $showhidden_arg $https_arg
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_set_param respawn
+	procd_close_instance gowebdav
+}
+
+service_triggers() {
+	procd_add_reload_trigger "gowebdav"
+}
+
+reload_service() {
+	stop
+	sleep 1
+	start
+}
+
+stop_service() {
+	get_config
+	pgrep -f /usr/bin/gowebdav | xargs kill -9 >/dev/null 2>&1
+	set_type="deny"
+	set_firewall
+}
