@@ -1,9 +1,0 @@
-#!/bin/sh
-
-subnet_routes=$(uci -q get tailscale.settings.subnet_routes)
-
-if [ -n "$subnet_routes" ]; then
-    /usr/bin/tailscale up --advertise-routes="$subnet_routes" > /tmp/tailscale.log
-else
-    /etc/init.d/tailscale up > /tmp/tailscale.log
-fi

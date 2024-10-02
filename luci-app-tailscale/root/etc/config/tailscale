@@ -1,2 +1,0 @@
-config tailscale 'tailscale'
-	option enable '0'

@@ -7,11 +7,10 @@
 include $(TOPDIR)/rules.mk
 THEME_NAME:=kucat
 THEME_TITLE:=Kucat Theme
-
 PKG_NAME:=luci-theme-$(THEME_NAME)
 LUCI_TITLE:=Kucat Theme by sirpdboy
 LUCI_DEPENDS:=
-PKG_VERSION:=1.5.6
+PKG_VERSION:=2.4.6
 PKG_RELEASE:=20240305
 
 define Package/luci-theme-$(THEME_NAME)/postinst
@@ -24,4 +23,5 @@ exit 0
 endef
 
 include $(TOPDIR)/feeds/luci/luci.mk
+
 # call BuildPackage - OpenWrt buildroot signature
