@@ -1,11 +1,11 @@
 {
 	"luci-app-ramfree": {
-		"description": "Free Your Boom",
+		"description": "Grant UCI access for luci-app-ramfree",
 		"read": {
-			"uci": ["release_ram"]
-		},
-		"write": {
-			"uci": ["release_ram"]
+			"file": {
+				"/bin/sync": [ "exec" ],
+				"/sbin/sysctl": [ "exec" ]
+			}
 		}
 	}
 }

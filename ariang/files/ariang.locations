@@ -1,0 +1,4 @@
+location /ariang-nginx {
+	index index.html;
+	alias /www/ariang/;
+}

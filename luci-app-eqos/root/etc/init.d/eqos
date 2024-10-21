@@ -2,38 +2,82 @@
 # Copyright (C) 2006 OpenWrt.org
 
 START=50
+USE_PROCD=1
+
+disable_offload() {
+	if [ $(uci -q show firewall.@defaults[0] | grep -c flow_offloading) -ge 1 ]; then
+		echo flow_offloading > /etc/.eqos_offload
+		uci -q del firewall.@defaults[0].flow_offloading
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+	elif [ $(uci -q show firewall.@defaults[0] | grep -c shortcut_fe) -ge 1 ]; then
+		uci -q get firewall.@defaults[0].shortcut_fe_module > /etc/.eqos_offload
+		uci -q del firewall.@defaults[0].shortcut_fe
+		uci -q del firewall.@defaults[0].shortcut_fe_module
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+		/etc/init.d/shortcut-fe restart
+	fi
+}
+
+enable_offload() {
+	offload_mode=$(cat /etc/.eqos_offload)
+	rm -f /etc/.eqos_offload
+	if [ "$offload_mode" = "flow_offloading" ]; then
+		uci set firewall.@defaults[0].flow_offloading='1'
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+	else
+		uci set firewall.@defaults[0].shortcut_fe='1'
+		uci set firewall.@defaults[0].shortcut_fe_module="$offload_mode"
+		uci commit firewall
+		/etc/init.d/firewall reload >/dev/null 2>&1
+		/etc/init.d/shortcut-fe restart
+	fi
+}
 
 parse_device() {
-	local cfg="$1" ip download upload
-	
-	config_get ip "$cfg" ip
-	config_get download "$cfg" download
-	config_get upload "$cfg" upload
-	
-	eqos add $ip $download $upload
+	local cfg="$1"
+
+	local enabled
+	config_get_bool enabled "$cfg" "enabled" "1"
+	[ "$enabled" -eq "1" ] || return 1
+
+	local ip download upload
+	config_get ip "$cfg" "ip"
+	config_get download "$cfg" "download"
+	config_get upload "$cfg" "upload"
+
+	eqos add "$ip" "$download" "$upload"
 }
 
-eqos_start() {
-	local cfg="$1" enabled download upload
-	
-	config_get_bool enabled "$cfg" enabled 0
-	[ $enabled -eq 0 ] && return 0
-	
-	config_get download "$cfg" download
-	config_get upload "$cfg" upload
-	
-	eqos start $download $upload
-	
-	config_foreach parse_device device
+start_service() {
+	config_load "eqos"
+
+	local enabled
+	config_get_bool enabled "config" "enabled" "0"
+	[ "$enabled" -eq "1" ] || return 1
+	disable_offload
+
+	local download upload
+	config_get download "config" "download"
+	config_get upload "config" "upload"
+
+	eqos start "$download" "$upload"
+
+	config_foreach parse_device "device"
 }
 
-start() {
+stop_service() {
 	eqos stop
-	
-	config_load eqos
-	config_foreach eqos_start eqos
+	[ -f "/etc/.eqos_offload" ] && enable_offload
 }
 
-stop() {
-	eqos stop
+reload_service() {
+	stop
+	start
+}
+
+service_triggers() {
+	procd_add_reload_trigger "eqos"
 }

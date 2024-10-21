@@ -1,0 +1,29 @@
+{
+  "admin/network/netspeedtest": {
+    "title": "SpeedTest",
+    "order": 55,
+    "action": {
+      "type": "firstchild"
+    },
+    "depends": {
+      "acl": [ "luci-app-netspeedtest" ],
+      "uci": { "netspeedtest": true }
+    }
+  },
+  "admin/network/netspeedtest/iperf3": {
+    "title": "iPerf3 Server",
+    "order": 1,
+    "action": {
+      "type": "view",
+      "path": "netspeedtest/iperf3"
+    }
+  },
+  "admin/network/netspeedtest/speedtest": {
+    "title": "Internet Speedtest",
+    "order": 2,
+    "action": {
+      "type": "view",
+      "path": "netspeedtest/speedtest"
+    }
+  }
+}

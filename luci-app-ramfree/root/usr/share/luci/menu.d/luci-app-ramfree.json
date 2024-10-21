@@ -1,0 +1,13 @@
+{
+	"admin/status/ramfree": {
+		"title": "Freeping Memory Cache",
+		"order": 9999,
+		"action": {
+			"type": "view",
+			"path": "ramfree"
+		},
+		"depends": {
+			"acl": [ "luci-app-ramfree" ]
+		}
+	}
+}

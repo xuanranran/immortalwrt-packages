@@ -1,0 +1,4 @@
+
+config settings 'cpufreq'
+	option mglru_enabled '1'
+	option mglru_min_ttl_ms '1000'

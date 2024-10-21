@@ -1,37 +1,46 @@
 #!/bin/sh /etc/rc.common
-# Copyright (C) 2018-2020 Lienol <lawlienol@gmail.com>
+# Copyright (C) 2018-2022 Lienol <lawlienol@gmail.com>
+# Improve by xiaozhuai <xiaozhuai7@gmail.com>
 
 START=99
-
+USE_PROCD=1
+PROG=/usr/sbin/filebrowser
 LOG_PATH="/var/log/filebrowser.log"
 
-echolog() {
-	echo -e "$(date "+%Y-%m-%d %H:%M:%S"): $1" >> $LOG_PATH
+get_config() {
+	config_get_bool enable $1 enable 1
+	config_get address $1 address "0.0.0.0"
+	config_get port $1 port 8088
+	config_get database $1 database "/etc/filebrowser.db"
+	config_get username $1 username "admin"
+	config_get password $1 password "admin"
+	config_get ssl_cert $1 ssl_cert ""
+	config_get ssl_key $1 ssl_key ""
+	config_get root_path $1 root_path "/"
 }
 
-config_t_get() {
-	local index=0
-	[ -n "$4" ] && index=$4
-	local ret=$(uci get filebrowser.@$1[$index].$2 2>/dev/null)
-	echo ${ret:=$3}
-}
-start() {
-	ENABLED=$(config_t_get global enable 0)
-	[ "$ENABLED" = "0" ] && return
-	PORT=$(config_t_get global port 8088)
-	ROOT_PATH=$(config_t_get global root_path /)
-	project_directory=$(config_t_get global project_directory /tmp)
-	[ ! -f "$project_directory/filebrowser" ] && echolog "在$project_directory找不到FileBrowser主程序，请下载。" && exit
-	export HOME="/root"
-	$project_directory/filebrowser -a 0.0.0.0 -p $PORT -r $ROOT_PATH -d ${ROOT_PATH}filebrowser.db -l $LOG_PATH >/dev/null 2>&1 &
-}
-
-stop() {
-	busybox ps -w | grep -v "grep" | grep "$project_directory/filebrowser -a 0.0.0.0" | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1 &
-	rm -rf $LOG_PATH
+start_service() {
+	config_load filebrowser
+	config_foreach get_config global
+	[ $enable != 1 ] && return 1
+	rm -f $LOG_PATH
+	ssl_params=""
+	[ -n "$ssl_cert" ] && [ -n "$ssl_key" ] && ssl_params="-t $ssl_cert -k $ssl_key"
+	password=$($PROG hash "$password")
+	procd_open_instance filebrowser
+	procd_set_param command $PROG
+	procd_append_param command -a $address -p $port -r $root_path -d "$database" --username $username --password $password $ssl_params -l $LOG_PATH
+	procd_set_param stdout 0
+	procd_set_param stderr 0
+	procd_set_param respawn
+	procd_close_instance filebrowser
 }
 
-restart() {
+service_triggers() {
+	procd_add_reload_trigger "filebrowser"
+}
+
+reload_service() {
 	stop
 	sleep 1
 	start

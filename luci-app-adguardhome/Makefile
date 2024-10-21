@@ -1,41 +1,29 @@
-# Copyright (C) 2018-2019 Lienol
-#
-# This is free software, licensed under the Apache License, Version 2.0 .
-#
-
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
-PKG_MAINTAINER:=<https://github.com/rufengsuixing/luci-app-adguardhome>
+PKG_RELEASE:=1
 
-LUCI_TITLE:=LuCI app for AdGuardHome
-LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+ca-certs +curl +wget-ssl +PACKAGE_$(PKG_NAME)_INCLUDE_binary:adguardhome
-LUCI_DESCRIPTION:=LuCI support for AdGuardHome
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
-define Package/$(PKG_NAME)/config
-config PACKAGE_$(PKG_NAME)_INCLUDE_binary
-	bool "Include Binary File"
-	default y
+include $(INCLUDE_DIR)/package.mk
+
+define Package/luci-app-adguardhome
+	SECTION:=luci
+	CATEGORY:=LuCI
+	SUBMENU:=3. Applications
+	TITLE:=LuCI app for adguardhome
+	PKGARCH:=all
+	DEPENDS:=+!wget-ssl&&!curl:wget-ssl
 endef
 
-PKG_CONFIG_DEPENDS:= CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_binary
+define Package/luci-app-adguardhome/description
+  LuCI support for adguardhome
+endef
 
 define Package/luci-app-adguardhome/conffiles
 /usr/share/AdGuardHome/links.txt
 /etc/config/AdGuardHome
-endef
-
-define Package/luci-app-adguardhome/postinst
-#!/bin/sh
-	/etc/init.d/AdGuardHome enable >/dev/null 2>&1
-	enable=$(uci get AdGuardHome.AdGuardHome.enabled 2>/dev/null)
-	if [ "$enable" == "1" ]; then
-		/etc/init.d/AdGuardHome reload
-	fi
-	rm -f /tmp/luci-indexcache
-	rm -f /tmp/luci-modulecache/*
-exit 0
+/etc/adguardhome
 endef
 
 define Package/luci-app-adguardhome/prerm
@@ -51,6 +39,6 @@ fi
 exit 0
 endef
 
-include $(TOPDIR)/feeds/luci/luci.mk
+$(eval $(call BuildPackage,luci-app-adguardhome))
 
 # call BuildPackage - OpenWrt buildroot signature
