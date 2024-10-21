@@ -1,0 +1,21 @@
+From 703c3d1dfd98e6133d7ca76d61f82da650caf101 Mon Sep 17 00:00:00 2001
+From: sbwml <admin@cooluc.com>
+Date: Mon, 2 Sep 2024 05:48:19 +0800
+Subject: [PATCH] fix version comparison issue in gnutls_version parsing
+
+Signed-off-by: sbwml <admin@cooluc.com>
+---
+ wscript_configure_system_gnutls | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/wscript_configure_system_gnutls
++++ b/wscript_configure_system_gnutls
+@@ -1,7 +1,7 @@
+ import os
+ 
+ def parse_version(v):
+-    return tuple(map(int, (v.split("."))))
++    return '.'.join(map(str, map(int, v.split("."))))
+ 
+ gnutls_min_required_version = "3.6.13"
+ 

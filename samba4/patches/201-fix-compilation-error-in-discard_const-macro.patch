@@ -1,0 +1,11 @@
+--- a/lib/replace/replace.h
++++ b/lib/replace/replace.h
+@@ -791,7 +791,7 @@ typedef unsigned long long ptrdiff_t ;
+   Also, please call this via the discard_const_p() macro interface, as that
+   makes the return type safe.
+ */
+-#define discard_const(ptr) ((void *)((uintptr_t)(ptr)))
++#define discard_const(ptr) ((void *)(ptr))
+ 
+ /** Type-safe version of discard_const */
+ #define discard_const_p(type, ptr) ((type *)discard_const(ptr))
