@@ -1,0 +1,22 @@
+From a2a84364b967e8f8d290dbb2d0ef1248efc52ce6 Mon Sep 17 00:00:00 2001
+From: sbwml <admin@cooluc.com>
+Date: Thu, 13 Jun 2024 02:22:14 +0800
+Subject: [PATCH] ftp: fix flush stdout to display prompt on OpenWrt
+
+Added `fflush(stdout);` to ensure the prompt is shown immediately.
+
+Signed-off-by: sbwml <admin@cooluc.com>
+---
+ ftp/ftp.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/ftp/ftp.c
++++ b/ftp/ftp.c
+@@ -305,6 +305,7 @@ dologin(const char *host)
+ 			printf("Name (%s:%s): ", host, myname);
+ 		else
+ 			printf("Name (%s): ", host);
++		fflush(stdout);
+ 		if (fgets(tmp, sizeof(tmp) - 1, stdin)==NULL) {
+ 			fprintf(stderr, "\nLogin failed.\n");
+ 			return 0;

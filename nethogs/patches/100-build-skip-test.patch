@@ -1,0 +1,11 @@
+--- a/Makefile
++++ b/Makefile
+@@ -3,7 +3,7 @@ export VERSION := $(shell ./determineVer
+ #export PREFIX := /usr
+ export PREFIX ?= /usr/local
+ 
+-all: decpcap_test test nethogs
++all: decpcap_test nethogs
+ 
+ .PHONY: tgz release check install install_lib install_dev uninstall uninstall_lib nethogs libnethogs decpcap_test test clean all
+ tgz: clean

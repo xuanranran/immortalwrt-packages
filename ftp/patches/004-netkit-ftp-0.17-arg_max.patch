@@ -1,0 +1,17 @@
+--- a/ftp/glob.c
++++ b/ftp/glob.c
+@@ -54,6 +54,14 @@ char glob_rcsid[] =
+ #include "ftp_var.h"  /* for protos only */
+ #include "glob.h"
+ 
++#include <unistd.h>
++#if defined(_SC_ARG_MAX)
++# if defined(ARG_MAX)
++#    undef ARG_MAX
++# endif
++# define ARG_MAX sysconf (_SC_ARG_MAX)
++#endif
++
+ #define	QUOTE 0200
+ #define	TRIM 0177
+ #define	eq(a,b)		(strcmp(a, b)==0)

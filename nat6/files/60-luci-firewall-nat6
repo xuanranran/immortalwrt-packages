@@ -1,0 +1,12 @@
+#!/bin/sh
+
+[ -f "/etc/config/ucitrack" ] && {
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@firewall[2]
+	add ucitrack firewall
+	set ucitrack.@firewall[2].init=nat6
+	commit ucitrack
+EOF
+}
+
+exit 0

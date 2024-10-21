@@ -1,0 +1,10 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@firewall[3]
+	add ucitrack firewall
+	set ucitrack.@firewall[3].init=natflow
+	commit ucitrack
+EOF
+
+exit 0

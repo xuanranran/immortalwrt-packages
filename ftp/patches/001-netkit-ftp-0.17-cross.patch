@@ -1,0 +1,104 @@
+--- a/configure
++++ b/configure
+@@ -93,7 +93,6 @@ else
+          echo 'no'
+          echo 'Compiler '"$CC"' does not exist or cannot compile C; try another.'
+          rm -f __conftest*
+-         exit
+      fi
+ fi
+ 
+@@ -180,7 +179,6 @@ else
+         echo 'no'
+         echo 'This package needs BSD signal semantics to run.'
+         rm -f __conftest*
+-        exit
+     fi
+ fi
+ rm -f __conftest*
+@@ -238,7 +236,6 @@ EOF
+         echo 'not found'
+         echo 'This package needs termcap to run.'
+         rm -f __conftest*
+-        exit
+     fi
+ fi
+ rm -f __conftest*
+@@ -323,7 +320,6 @@ else
+             echo 'no'
+             echo 'Cannot work out what to use for socklen_t. Help...'
+             rm -f __conftest*
+-            exit
+         fi
+     fi
+ fi
+@@ -400,7 +396,6 @@ else
+             echo 'missing'
+             echo 'This package requires snprintf.'
+             rm -f __conftest*
+-            exit
+         fi
+     fi
+ fi
+--- a/ftp/cmds.c
++++ b/ftp/cmds.c
+@@ -68,6 +68,10 @@ char cmds_rcsid[] =
+ #include "cmds.h"
+ #include "glob.h"
+ 
++#ifndef index
++#define index strchr
++#endif
++
+ void intr(int);
+ 
+ extern FILE *cout;
+--- a/ftp/ftp.c
++++ b/ftp/ftp.c
+@@ -65,6 +65,13 @@ char ftp_rcsid[] =
+ 
+ #include "../version.h"
+ 
++#ifndef index
++#define index strchr
++#endif
++#ifndef rindex
++#define rindex strrchr
++#endif
++
+ int data = -1;
+ off_t restart_point = 0;
+ 
+--- a/ftp/Makefile
++++ b/ftp/Makefile
+@@ -16,11 +16,12 @@ cmds.o cmdtab.o: ftp_var.h pathnames.h c
+ cmds.o glob.o: glob.h
+ 
+ install: ftp
+-	install -s -m$(BINMODE) ftp $(INSTALLROOT)$(BINDIR)
+-	ln -sf ftp $(INSTALLROOT)$(BINDIR)/pftp
+-	install -m$(MANMODE) ftp.1 $(INSTALLROOT)$(MANDIR)/man1
+-	ln -sf ftp.1 $(INSTALLROOT)$(MANDIR)/man1/pftp.1
+-	install -m$(MANMODE) netrc.5 $(INSTALLROOT)$(MANDIR)/man5
++	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(MANDIR)/man{1,5}
++	install -m$(BINMODE) ftp $(DESTDIR)$(BINDIR)
++	cd $(DESTDIR)$(BINDIR)/ && ln -sf ftp pftp
++	install -m$(MANMODE) ftp.1 $(DESTDIR)$(MANDIR)/man1
++	cd $(DESTDIR)$(MANDIR)/man1 && ln -sf ftp.1 pftp.1
++	install -m$(MANMODE) netrc.5 $(DESTDIR)$(MANDIR)/man5
+ 
+ clean:
+ 	rm -f *.o ftp
+--- a/ftp/ruserpass.c
++++ b/ftp/ruserpass.c
+@@ -58,6 +58,10 @@ static int token(void);
+ #define	ID	10
+ #define	MACH	11
+ 
++#ifndef index
++#define index strchr
++#endif
++
+ static char tokval[100];
+ 
+ static struct toktab {

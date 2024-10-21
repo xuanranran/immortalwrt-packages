@@ -1,0 +1,111 @@
+#!/bin/sh /etc/rc.common
+
+START=90
+
+interface() {
+	nic=$(ifconfig -a | grep -o '^[^ ]*')
+	dhcpv6_interface=$(uci -q show network | grep dhcpv6 | grep -o 'network\.\([^\.]*\)' | sed 's/network.//')
+	IFS=$'\n'
+	for interface_name in $dhcpv6_interface
+	do
+		device=$(uci -q show network.$interface_name.device | grep -o "'.*'" | awk -F"'" '{print $2}')
+		if [ "$(echo $device | grep -c @)" = 1 ]; then
+			alias_interface=$(echo $device | sed 's/@//')
+			device=$(uci -q show network.$alias_interface.device | grep -o "'.*'" | awk -F"'" '{print $2}')
+			if [ -z $(uci -q show network.$alias_interface.device) ]; then
+				ipaddr=$(uci -q show network.$alias_interface.ipaddr | grep -o "'.*'" | awk -F"'" '{print $2}')
+				device=$(ifconfig | grep -B 1 $ipaddr 2>/dev/null | head -1 | awk '{print $1}')
+			fi
+		fi
+		if [ $(ifconfig $device | grep -c "inet6 addr") -gt 0 ]; then
+			gateway=$(ip -6 route | grep "default from" | awk '{print $5}')
+			break
+		fi
+	done
+}
+
+hotplug_iface() {
+	[ ! -f /etc/hotplug.d/iface/90-nat6 ] && cat > /etc/hotplug.d/iface/90-nat6 << "EOF"
+#!/bin/sh
+
+dhcpv6_interface=$(uci -q show network | grep dhcpv6 | grep -o 'network\.\([^\.]*\)' | sed 's/network.//')
+IFS=$'\n'
+for interface_name in $dhcpv6_interface
+do
+	device=$(uci -q show network.$interface_name.device | grep -o "'.*'" | awk -F"'" '{print $2}')
+	if [ $(ifconfig $device | grep -c "inet6 addr") -gt 0 ]; then
+		interface_name=$interface_name
+	fi
+done
+
+[ "$INTERFACE" = "$interface_name" ] || exit 0
+
+if [ "$ACTION" = ifup ] || [ "$ACTION" = iflink ] || [ "$ACTION" = ifupdate ] || [ "$ACTION" = reload ]; then
+	/etc/init.d/nat6 restart
+fi
+EOF
+}
+
+common_config() {
+	if [ -z $(uci -q get network.globals.ula_prefix) ] || [ $(uci -q get network.globals.ula_prefix | grep -c "/48") != 1 ]; then
+		r1=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | hexdump -e '1/1 "%02x"')
+		uci -q batch <<-EOF >/dev/null
+			set network.globals.ula_prefix="fd$r1:2024::/48"
+			commit network
+EOF
+		/etc/init.d/network reload
+	fi
+	lan_ra=$(uci -q get dhcp.lan.ra)
+	lan_dhcp6=$(uci -q get dhcp.lan.dhcpv6)
+	lan_ndp=$(uci -q get dhcp.lan.ndp)
+	lan_ra_default=$(uci -q get dhcp.lan.ra_default)
+	lan_ra_slaac=$(uci -q get dhcp.lan.ra_slaac)
+	if [ "$lan_ra" != "server" ] || [ "$lan_dhcp6" != "server" ] || [ "$lan_ndp" != "" ] || [ "$lan_ra_default" != "2" ] || [ "$lan_ra_slaac" != "0" ]; then
+		uci -q batch <<-EOF >/dev/null
+			set dhcp.lan.ra='server'
+			set dhcp.lan.dhcpv6='server'
+			del dhcp.lan.ndp
+			set dhcp.lan.ra_default='2'
+			set dhcp.lan.ra_slaac='0'
+			del dhcp.lan.ra_flags
+			add_list dhcp.lan.ra_flags='managed-config'
+			commit dhcp
+EOF
+		/etc/init.d/odhcpd reload
+	fi
+}
+
+start() {
+	[ "$(uci -q get firewall.@defaults[0].nat6)" != 1 ] && return 0
+	interface
+	hotplug_iface
+	[ -z "$device" ] && logger -p error -t network -s "nat6: DHCPv6 interface device not configured, IPv6 NAT failed." && exit 0
+	[ -z "$gateway" ] && logger -p error -t network -s "nat6: DHCPv6 gateway not found, IPv6 NAT failed." && exit 0
+	common_config
+	ip -6 r add default via $gateway dev $device 2>/dev/null
+	nft delete table ip6 nat 2>/dev/null
+	nft add table ip6 nat 2>/dev/null
+	nft add chain ip6 nat prerouting { type nat hook prerouting priority 0\; } 2>/dev/null
+	nft add chain ip6 nat postrouting { type nat hook postrouting priority 100\; } 2>/dev/null
+	nft add rule ip6 nat postrouting oif $device masquerade 2>/dev/null
+	logger -p notice -t network -s "nat6: IPv6 NAT is ready"
+}
+
+stop() {
+	interface
+	nft delete table ip6 nat 2>/dev/null
+	ip -6 r del default via $gateway dev $device 2>/dev/null
+	rm -f /etc/hotplug.d/iface/90-nat6
+	uci -q batch <<-EOF >/dev/null
+		del dhcp.lan.ra_default
+		commit dhcp
+EOF
+	if [ "$(uci -q get dhcp.lan.ra_slaac)" != "" ]; then
+		uci -q batch <<-EOF >/dev/null
+			del dhcp.lan.ra_slaac
+			del dhcp.lan.ra_flags
+			commit dhcp
+EOF
+	fi
+	/etc/init.d/odhcpd reload
+}
