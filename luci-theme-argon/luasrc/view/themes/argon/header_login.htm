@@ -82,7 +82,20 @@
 	<link rel="manifest" href="<%=media%>/icon/manifest.json" crossorigin="use-credentials">
 	<meta name="msapplication-TileColor" content="<%=bar_color%>">
 	<meta name="msapplication-TileImage" content="<%=media%>/icon/ms-icon-144x144.png">
-	<meta name="theme-color" content="<%=bar_color%>">
+    <% if mode == 'normal' then %>
+    <meta name="theme-color" content="<%=bar_color%>">
+    <script type="text/javascript">
+        let prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDarkMode) {
+            viewport = document.querySelector("meta[name=theme-color]");
+            viewport.setAttribute('content', '#444950');
+        }
+    </script>
+    <% elseif mode == 'dark' then %>
+    <meta name="theme-color" content="#444950">
+    <% elseif mode == 'light' then %>
+    <meta name="theme-color" content="<%=bar_color%>">
+    <% end -%>
 	<link rel="stylesheet" href="<%=media%>/css/cascade.css<%# ?v=PKG_VERSION %>">
 	<style title="text/css">
 		<% if mode == 'normal' then %>

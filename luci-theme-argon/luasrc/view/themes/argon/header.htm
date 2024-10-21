@@ -85,39 +85,40 @@
 	<link rel="manifest" href="<%=media%>/icon/manifest.json"  crossorigin="use-credentials">
 	<meta name="msapplication-TileColor" content="<%=bar_color%>">
 	<meta name="msapplication-TileImage" content="<%=media%>/icon/ms-icon-144x144.png">
-	<meta name="theme-color" content="<%=bar_color%>">
-	<link rel="stylesheet" href="<%=media%>/css/cascade.css<%# ?v=PKG_VERSION %>">
-	<style title="text/css">
-		<% if mode ~= 'dark' then %>
-			@media (prefers-color-scheme: dark) {
-				<%=dark_css%>
-			}
-		<% if fs.access('/etc/config/argon') then %>
-		:root {
-			--primary: <%=primary%>;
-			--dark-primary: <%=dark_primary%>;
-				--bar-bg: <%=primary%>;
-			--blur-radius:<%=blur_radius%>px;
-			--blur-opacity:<%=blur_opacity%>;
-			--blur-radius-dark:<%=blur_radius_dark%>px;
-			--blur-opacity-dark:<%=blur_opacity_dark%>;
-		}
-		<% end -%>
-		<% elseif mode == 'dark' then %>
-			<%=dark_css%>
-		<% if fs.access('/etc/config/argon') then %>
-		:root {
-			--primary: <%=primary%>;
-			--dark-primary: <%=dark_primary%>;
-				--bar-bg: <%=dark_primary%>;
-			--blur-radius:<%=blur_radius%>px;
-			--blur-opacity:<%=blur_opacity%>;
-			--blur-radius-dark:<%=blur_radius_dark%>px;
-			--blur-opacity-dark:<%=blur_opacity_dark%>;
-		}
-		<% end -%>
-		<% end -%>
-	</style>
+    <% if mode == 'normal' then %>
+    <meta name="theme-color" content="<%=bar_color%>">
+    <script type="text/javascript">
+        let prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDarkMode) {
+            viewport = document.querySelector("meta[name=theme-color]");
+            viewport.setAttribute('content', '#444950');
+        }
+    </script>
+    <% elseif mode == 'dark' then %>
+    <meta name="theme-color" content="#444950">
+    <% elseif mode == 'light' then %>
+    <meta name="theme-color" content="<%=bar_color%>">
+    <% end -%>
+    <link rel="stylesheet" href="<%=media%>/css/cascade.css<%# ?v=PKG_VERSION %>">
+    <style title="text/css">
+        <% if mode == 'normal' then %>
+            @media (prefers-color-scheme: dark) {
+                <%=dark_css%>
+            }
+        <% elseif mode == 'dark' then %>
+            <%=dark_css%>
+        <% end -%>
+        <% if fs.access('/etc/config/argon') then %>
+        :root {
+            --primary: <%=primary%>;
+            --dark-primary: <%=dark_primary%>;
+            --blur-radius:<%=blur_radius%>px;
+            --blur-opacity:<%=blur_opacity%>;
+            --blur-radius-dark:<%=blur_radius_dark%>px;
+            --blur-opacity-dark:<%=blur_opacity_dark%>;
+        }
+        <% end -%>
+    </style>
 	<link rel="shortcut icon" href="<%=media%>/favicon.ico">
 	<% if node and node.css then %>
 	<link rel="stylesheet" href="<%=resource%>/<%=node.css%>">
@@ -141,7 +142,7 @@
 	<div class="main">
 		<div class="main-left" id="mainmenu" style="display:none">
 			<div class="sidenav-header d-flex align-items-center">
-				<a class="brand" href="#"><%=brand_name%></a>
+				<a class="brand" href="/"><%=brand_name%></a>
 				<div class="ml-auto">
 					<!-- Sidenav toggler -->
 					<div class="sidenav-toggler d-none d-xl-block active" data-action="sidenav-unpin"
@@ -161,7 +162,7 @@
 					<div class="container">
 						<div class="flex1">
 							<a class="showSide"></a>
-							<a class="brand" href="#"><%=brand_name%></a>
+							<a class="brand" href="/"><%=brand_name%></a>
 						</div>
 						<div class="status" id="indicators"></div>
 					</div>
